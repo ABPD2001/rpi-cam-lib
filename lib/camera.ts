@@ -1,4 +1,5 @@
-import { spawn, exec, execSync } from "child_process";
+import { spawn, exec, execSync } from "node:child_process";
+import { kill } from "node:process";
 import { ICameraStillOptions, ICameraVideoOptions } from "./interfaces/camera";
 
 export class RPICam {
@@ -260,6 +261,25 @@ export class RPICam {
     return command;
   }
 
+  killTask(id: string) {
+    if (this.tasks.some((e) => e.id == id)) {
+      try {
+        kill(this.tasks.find((e) => e.id == id)!.pid, 15);
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+  }
+  killAllTasks() {
+    try {
+      this.tasks.map((e) => kill(e.pid, 15));
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
   serveStillSync(
     filename: string,
     format: string | "auto" = "auto",
@@ -302,12 +322,18 @@ export class RPICam {
       options
     );
 
+    if (this.tasks.some((e) => e.id == id))
+      throw new Error("'serveStill' ,id must be unique!");
+
     return new Promise((res, rej) => {
       this.tasks.push({
         pid:
           exec(command, (error, output) => {
             if (error) rej({ error, success: false });
-            else if (output) res({ output, success: true });
+            else if (output) {
+              res({ output, success: true });
+              this.tasks = this.tasks.filter((e) => e.id == id);
+            }
           }).pid || -1,
         id,
       });
@@ -359,13 +385,18 @@ export class RPICam {
       height,
       options
     );
+    if (this.tasks.some((e) => e.id == id))
+      throw new Error("'serveVideo' ,id must be unique!");
 
     return new Promise((res, rej) => {
       this.tasks.push({
         pid:
           exec(command, (error, output) => {
             if (error) rej({ error, success: false });
-            else if (output) res({ output, success: true });
+            else if (output) {
+              res({ output, success: true });
+              this.tasks = this.tasks.filter((e) => e.id == id);
+            }
           }).pid || -1,
         id,
       });
