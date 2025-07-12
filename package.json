@@ -1,0 +1,23 @@
+{
+  "name": "rpi-cam",
+  "version": "1.0.0",
+  "description": "Lightweight library for taking control of CSI-2 camera modules via any raspberry pi can read camera module data but is dependent to shell.",
+  "keywords": [
+    "rpi-cam",
+    "camera",
+    "rpi",
+    "raspberry",
+    "pi",
+    "raspberry-pi",
+    "raspberry-pi-cam",
+    "cam"
+  ],
+  "license": "MIT",
+  "author": "ABPD2001",
+  "type": "module",
+  "main": "./index.ts",
+  "devDependencies": {
+    "@types/node": "^24.0.13",
+    "typescript": "^5.8.3"
+  }
+}
