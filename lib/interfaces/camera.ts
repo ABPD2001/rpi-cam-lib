@@ -93,3 +93,7 @@ export interface ICameraVideoOptions extends ICameraCommonOptions {
   codecLevel?: string;
   instra?: number;
 }
+
+export interface ICameraOptions {
+  autoReserve?: boolean;
+}

@@ -1,14 +1,32 @@
 import { spawn, exec, execSync } from "node:child_process";
 import { kill } from "node:process";
-import { ICameraStillOptions, ICameraVideoOptions } from "./interfaces/camera";
+import {
+  ICameraOptions,
+  ICameraStillOptions,
+  ICameraVideoOptions,
+} from "./interfaces/camera";
+import { EventEmitter } from "node:events";
+
+class LiveMode extends EventEmitter {
+  constructor() {
+    super();
+  }
+}
 
 export class RPICam {
   private camera: number;
+  private options?: ICameraOptions;
+  private reserved: boolean = false;
   public tasks: { id: string; pid: number }[];
+  public live: LiveMode = new LiveMode();
 
-  constructor(camera: number) {
+  constructor(camera: number, options?: ICameraOptions) {
     this.camera = camera;
     this.tasks = [];
+    this.options = options;
+    if (options?.autoReserve && this.isReadySync()) {
+      this.reserve();
+    }
   }
 
   private _serveStill_params(
@@ -121,7 +139,7 @@ export class RPICam {
       { key: "--keypress", cond: keypress, value: keypress },
     ];
 
-    const command = `rpicam-still ${flags
+    const command = `rpicam-still --camera ${this.camera} ${flags
       .filter((e) => e.cond)
       .map((e) => `${e.key}${e.value ? e.value : ""}`)
       .join(" ")} -w ${width} -h ${height} -o ${filename}`;
@@ -253,27 +271,39 @@ export class RPICam {
       { key: "--circular", cond: circularMode, value: undefined },
     ];
 
-    const command = `rpicam-still ${flags
+    const command = `rpicam-still --camera ${this.camera} ${flags
       .filter((e) => e.cond)
       .map((e) => `${e.key}${e.value ? e.value : ""}`)
       .join(" ")} -w ${width} -h ${height} -o ${filename}`;
 
     return command;
   }
+  reserve() {
+    this.serveVideo("-", 0, "auto", 50, 50, "Reserve", { fps: 5 });
+    this.reserved = true;
+  }
+  unlockReserve() {
+    this.killTask("Reserve");
+    this.reserved = false;
+  }
 
-  killTask(id: string) {
+  isReserved() {
+    return this.reserved;
+  }
+
+  killTask(id: string, force: boolean = true) {
     if (this.tasks.some((e) => e.id == id)) {
       try {
-        kill(this.tasks.find((e) => e.id == id)!.pid, 15);
+        kill(this.tasks.find((e) => e.id == id)!.pid, force ? 15 : 9);
         return true;
       } catch (err) {
         return false;
       }
     }
   }
-  killAllTasks() {
+  killAllTasks(force?: boolean) {
     try {
-      this.tasks.map((e) => kill(e.pid, 15));
+      this.tasks.map((e) => kill(e.pid, force ? 15 : 9));
       return true;
     } catch (err) {
       return false;
@@ -285,8 +315,9 @@ export class RPICam {
     format: string | "auto" = "auto",
     width: number,
     height: number,
-    options?: ICameraStillOptions
+    options?: ICameraStillOptions & { stream?: boolean }
   ) {
+    if (this.reserved) this.unlockReserve();
     const command = this._serveStill_params(
       filename,
       format,
@@ -294,26 +325,32 @@ export class RPICam {
       height,
       options
     );
+    if (options?.stream) {
+      const proc = spawn(command);
+      return { stream: proc, success: true };
+    }
     try {
       const execute = execSync(command);
-
       return {
-        output: execute.toString(),
+        output: execute,
         error: undefined,
         success: true,
       };
     } catch (err) {
       return { output: undefined, error: err, success: false };
+    } finally {
+      if (this.options?.autoReserve) this.reserve();
     }
   }
-  serveStill(
+  async serveStill(
     filename: string,
     format: string | "auto" = "auto",
     width: number,
     height: number,
     id: string,
-    options?: ICameraStillOptions
+    options?: ICameraStillOptions & { stream?: boolean }
   ) {
+    if (this.reserved) this.unlockReserve();
     const command = this._serveStill_params(
       filename,
       format,
@@ -325,19 +362,24 @@ export class RPICam {
     if (this.tasks.some((e) => e.id == id))
       throw new Error("'serveStill' ,id must be unique!");
 
-    return new Promise((res, rej) => {
+    if (options?.stream) {
+      const proc = spawn(command);
+      return { stream: proc, success: true };
+    }
+
+    return await new Promise((res, rej) => {
       this.tasks.push({
         pid:
           exec(command, (error, output) => {
             if (error) rej({ error, success: false });
             else if (output) {
               res({ output, success: true });
-              this.tasks = this.tasks.filter((e) => e.id == id);
+              this.tasks = this.tasks.filter((e) => e.id != id);
             }
           }).pid || -1,
         id,
       });
-    });
+    }).finally(() => this.options?.autoReserve && this.reserve());
   }
 
   serveVideoSync(
@@ -346,8 +388,9 @@ export class RPICam {
     format: string | "auto" = "auto",
     width: number,
     height: number,
-    options?: ICameraVideoOptions
+    options?: ICameraVideoOptions & { stream?: boolean }
   ) {
+    if (this.reserved) this.unlockReserve();
     const command = this._serveVideo_params(
       filename,
       timeout,
@@ -357,26 +400,34 @@ export class RPICam {
       options
     );
     try {
+      if (options?.stream) {
+        const proc = spawn(command);
+        return { stream: proc, seccess: true };
+      }
       const execute = execSync(command);
 
       return {
-        output: execute.toString(),
+        output: execute,
         error: undefined,
         success: true,
       };
     } catch (err) {
       return { output: undefined, error: err, success: false };
+    } finally {
+      if (this.options?.autoReserve) this.reserve();
     }
   }
-  serveVideo(
+  async serveVideo(
     filename: string,
     timeout: number,
     format: string | "auto" = "auto",
     width: number,
     height: number,
     id: string,
-    options?: Omit<ICameraVideoOptions, "timeout">
+    options?: ICameraVideoOptions & { stream?: boolean }
   ) {
+    if (this.reserved) this.unlockReserve();
+
     const command = this._serveVideo_params(
       filename,
       timeout,
@@ -388,19 +439,24 @@ export class RPICam {
     if (this.tasks.some((e) => e.id == id))
       throw new Error("'serveVideo' ,id must be unique!");
 
-    return new Promise((res, rej) => {
+    if (options?.stream) {
+      const proc = spawn(command);
+      return { stream: proc, success: true };
+    }
+
+    return await new Promise((res, rej) => {
       this.tasks.push({
         pid:
           exec(command, (error, output) => {
             if (error) rej({ error, success: false });
             else if (output) {
               res({ output, success: true });
-              this.tasks = this.tasks.filter((e) => e.id == id);
+              this.tasks = this.tasks.filter((e) => e.id != id);
             }
           }).pid || -1,
         id,
       });
-    });
+    }).finally(() => this.options?.autoReserve && this.reserve());
   }
 
   serveLive(
@@ -409,17 +465,66 @@ export class RPICam {
     id: string,
     options: ICameraVideoOptions
   ) {
+    if (this.reserved) this.unlockReserve();
     const [cmd, ...args] = this._serveVideo_params(
-      "",
+      "-",
       0,
       "",
       width,
       height,
       options
     ).split(" ");
+    try {
+      const process = spawn(cmd, args);
+      this.tasks.push({ pid: process.pid || -1, id });
+      this.live.emit("started");
+      process.stdout.on("data", (frame) => {
+        this.live.emit("frame", frame);
+      });
+      process.on("close", () => {
+        this.live.emit("closed");
+        if (this.options?.autoReserve) this.reserve();
+      });
+    } catch (err) {
+      this.tasks.filter((e) => e.id != id);
+    }
+  }
 
-    const process = spawn(cmd, args);
-    this.tasks.push({ pid: process.pid || -1, id });
-    return process;
+  getAvailCameras() {
+    const rawData = execSync("rpicam-still --list-cameras").toString();
+    if (rawData.includes("No cameras available!")) return [];
+    const lists = rawData
+      .split("-----------------")
+      .slice(1)
+      .map((e) => {
+        const [idx, data] = e.split(":").map((a) => a.trim());
+        const [name, resolution, path] = data.split(" ");
+        const [width, height] = resolution
+          .replace("[", "")
+          .replace("]", "")
+          .split("x");
+
+        return {
+          index: Number(idx),
+          name,
+          resolution: { width: Number(width), height: Number(height) },
+          path: path.replace("(", "").replace(")", ""),
+        };
+      });
+
+    return lists;
+  }
+  isReadySync() {
+    try {
+      execSync("rpicam-still -t 10 -o -");
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+  async isReady() {
+    return await new Promise((res) => {
+      exec("rpicam-still -t 10 -o -", (err) => (err ? res(false) : res(true)));
+    });
   }
 }
