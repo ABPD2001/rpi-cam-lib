@@ -80,11 +80,10 @@ export interface ICameraVideoOptions extends ICameraCommonOptions {
   fps?: number;
   bitrate?: string;
   codec?: "h264" | "mjpeg" | "yuv420" | "h265";
-  audioChannels?: number;
-  audioSamplerate?: number;
-  audioBitrate?: string;
-  audioCodec?: "aac" | "mp3" | "pcm";
-  ffmpeg?: boolean;
+  // audioChannels?: number;
+  // audioSamplerate?: number;
+  // audioBitrate?: string;
+  // audioCodec?: "aac" | "mp3" | "pcm";
   segment?: number;
   circularMode?: boolean;
   maxFileSize?: string;
