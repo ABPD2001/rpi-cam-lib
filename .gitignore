@@ -1,4 +1,4 @@
-./test
-./node_modules
-./package-lock.json
-./tsconfig.json
+test
+node_modules
+package-lock.json
+tsconfig.json
