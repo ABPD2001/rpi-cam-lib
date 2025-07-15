@@ -13,6 +13,7 @@
     "cam"
   ],
   "license": "MIT",
+  "repository": "",
   "author": "ABPD2001",
   "type": "module",
   "main": "./index.ts",
