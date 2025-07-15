@@ -68,6 +68,7 @@ interface ICameraCommonOptions {
   awbgains?: string;
   datetime?: boolean;
   metadata?: boolean;
+  format?: string;
 }
 
 export interface ICameraStillOptions extends ICameraCommonOptions {
@@ -95,4 +96,14 @@ export interface ICameraVideoOptions extends ICameraCommonOptions {
 
 export interface ICameraOptions {
   autoReserve?: boolean;
+}
+
+export interface ICameraDescriptor {
+  index: number;
+  name: string;
+  resolution: {
+    width: number;
+    height: number;
+  };
+  path: string;
 }

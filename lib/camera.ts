@@ -1,10 +1,17 @@
-import { spawn, exec, execSync } from "node:child_process";
-import { kill } from "node:process";
 import {
+  spawn,
+  exec,
+  execSync,
+  ChildProcessWithoutNullStreams,
+} from "node:child_process";
+import { kill } from "node:process";
+import type {
+  ICameraDescriptor,
   ICameraOptions,
   ICameraStillOptions,
   ICameraVideoOptions,
-} from "./interfaces/camera";
+  IOutputException,
+} from "./interfaces/index";
 import { EventEmitter } from "node:events";
 
 class LiveMode extends EventEmitter {
@@ -12,14 +19,24 @@ class LiveMode extends EventEmitter {
     super();
   }
 }
-
 export class RPICam {
   private camera: number;
   private options?: ICameraOptions;
   private reserved: boolean = false;
+
+  /** @type {{ id: string; pid: number }[]} */
+  /**@prop `tasks` is current async opreations running on camera with pid and id.*/
   public tasks: { id: string; pid: number }[];
+
+  /** @type {LiveMode} */
+  /** @prop live streaming of camera comes to `live` event emitter of class.*/
   public live: LiveMode = new LiveMode();
 
+  /**
+   * @constructor class of `RPICam`, also this constructor can wait until camera get ready.
+   * @param {number} camera is number of camera to get in use.
+   * @param {ICameraOptions} options is avail options and formatting and setting camera by manual and method of capturing.
+   */
   constructor(camera: number, options?: ICameraOptions) {
     this.camera = camera;
     this.tasks = [];
@@ -31,7 +48,6 @@ export class RPICam {
 
   private _serveStill_params(
     filename: string,
-    format: string | "auto" = "auto",
     width: number,
     height: number,
     options?: ICameraStillOptions
@@ -66,6 +82,7 @@ export class RPICam {
       timelapse,
       signal,
       keypress,
+      format,
     } = options || {};
 
     const zoomValues: {
@@ -142,7 +159,7 @@ export class RPICam {
     const command = `rpicam-still --camera ${this.camera} ${flags
       .filter((e) => e.cond)
       .map((e) => `${e.key}${e.value ? e.value : ""}`)
-      .join(" ")} -w ${width} -h ${height} -o ${filename}`;
+      .join(" ")} -w ${width} -h ${height} ${filename ? `-o ${filename}` : ""}`;
 
     return command;
   }
@@ -150,7 +167,6 @@ export class RPICam {
   private _serveVideo_params(
     filename: string,
     timeout: number,
-    format: string | "auto" = "auto",
     width: number,
     height: number,
     options?: Omit<ICameraVideoOptions, "timeout">
@@ -191,6 +207,7 @@ export class RPICam {
       metadata,
       keypress,
       signal,
+      format,
     } = options || {};
 
     const zoomValues: {
@@ -274,60 +291,122 @@ export class RPICam {
     const command = `rpicam-still --camera ${this.camera} ${flags
       .filter((e) => e.cond)
       .map((e) => `${e.key}${e.value ? e.value : ""}`)
-      .join(" ")} -w ${width} -h ${height} -o ${filename}`;
+      .join(" ")} -w ${width} -h ${height} ${filename ? `-o ${filename}` : ""}`;
 
     return command;
   }
-  reserve() {
-    this.serveVideo("-", 0, "auto", 50, 50, "Reserve", { fps: 5 });
-    this.reserved = true;
-  }
-  unlockReserve() {
-    this.killTask("Reserve");
-    this.reserved = false;
+
+  /**
+   * Reserve camera to not get in use of other process by opening a infinite and cancellable stream of recording.
+   * @returns {Promise<IOutputException>} reservation status.
+   */
+  async reserve(): Promise<IOutputException> {
+    return new Promise<IOutputException>(async (res, rej) => {
+      if (!this.isReadySync())
+        rej({
+          success: false,
+          error: {
+            name: "CAMERA_BUSY_ALREADY",
+            readable:
+              "Can not reserve camera because is busy (in use of other process).",
+          },
+        });
+
+      const resp = await this.serveVideo("-", 0, 50, 50, "Reserve", {
+        fps: 5,
+      });
+      res({ success: resp.success });
+    });
   }
 
-  isReserved() {
+  /**
+   * kills process of reservation of camera and make it free.
+   * @returns {IOutputException} status of unlocking camera.
+   */
+
+  unlockReserve(): IOutputException {
+    if (!this.reserved)
+      return {
+        success: false,
+        error: {
+          readable: "Camera should be reserved to unlock!",
+          name: "NOT_RESERVED",
+        },
+      };
+    return this.killTask("Reserve");
+  }
+
+  /**
+   * Check reservation of camera by this process.
+   * @returns {boolean} is reserved or not.
+   */
+
+  isReserved(): boolean {
     return this.reserved;
   }
 
-  killTask(id: string, force: boolean = true) {
+  /**
+   * Kills a async task opreation of camera.
+   * @param {string} id is a custom id to call it everywhere and should be unique or get a error.
+   * @param {boolean} force to kill a task or not, forcing sends a SIGKILL code to a task but, else sends a SIGTERM code to process.
+   * @returns {IOutputException} status of killing a process, if id not exists, returns a error response, but else, throw a error.
+   */
+
+  killTask(id: string, force: boolean = true): IOutputException {
     if (this.tasks.some((e) => e.id == id)) {
       try {
-        kill(this.tasks.find((e) => e.id == id)!.pid, force ? 15 : 9);
-        return true;
+        kill(this.tasks.find((e) => e.id == id)!.pid, force ? 9 : 15);
+        return { success: true };
       } catch (err) {
-        return false;
+        throw err;
       }
     }
+    return {
+      success: false,
+      error: { readable: "id not exists in tasks!", name: "BAD_ID" },
+    };
   }
-  killAllTasks(force?: boolean) {
+  /**
+   *
+   * @ * @param {boolean} force to kill a task or not, forcing sends a SIGKILL code to a task but, else sends a SIGTERM code to processes.
+   * @returns {IOutputException} status of killing all process,if error detected, throw a error.
+   */
+
+  killAllTasks(force?: boolean): IOutputException {
     try {
-      this.tasks.map((e) => kill(e.pid, force ? 15 : 9));
-      return true;
+      this.tasks.map((e) => kill(e.pid, force ? 9 : 15));
+      return { success: true };
     } catch (err) {
-      return false;
+      return {
+        success: false,
+        error: {
+          readable: `An error detected while trying to kill all tasks!\nerr: ${err}`,
+          name: "KILLING_ALL_ID_ERROR",
+        },
+      };
     }
   }
 
+  /**
+   * Same as `serveStill` but is sync.
+   * @param {string} filename is path of saving image, also is okay set it to empty string for streaming options and everything like stream should not be outputed on a file or use `serveStillCutomSync` to set everything manually.
+   * @param {number} width (no description needed)
+   * @param {number} height (no description needed)
+   * @param { ICameraStillOptions & { stream?: boolean }} options of serving (full settings and options of camera and rpicam).
+   * @returns {IOutputException} capturing status or stream event emitter output.
+   */
+
   serveStillSync(
     filename: string,
-    format: string | "auto" = "auto",
     width: number,
     height: number,
     options?: ICameraStillOptions & { stream?: boolean }
-  ) {
+  ): IOutputException {
     if (this.reserved) this.unlockReserve();
-    const command = this._serveStill_params(
-      filename,
-      format,
-      width,
-      height,
-      options
-    );
+    const command = this._serveStill_params(filename, width, height, options);
     if (options?.stream) {
       const proc = spawn(command);
-      return { stream: proc, success: true };
+      return { output: proc, success: true };
     }
     try {
       const execute = execSync(command);
@@ -337,23 +416,75 @@ export class RPICam {
         success: true,
       };
     } catch (err) {
-      return { output: undefined, error: err, success: false };
+      throw err;
     } finally {
       if (this.options?.autoReserve) this.reserve();
     }
   }
-  async serveStill(
-    filename: string,
-    format: string | "auto" = "auto",
+  /**
+   * Same as `serveStillCustom` but is sync.
+   * @param {number} width (no description needed)
+   * @param {number} height (no description needed)
+   * @param { ICameraStillOptions & {stream?: boolean,output?: string,format?: string}} options of serving (full settings and options of camera and rpicam).
+   * @returns {IOutputException} capturing status or stream event emitter output.
+   */
+
+  serveStillCustomSync(
+    width: number,
+    height: number,
+    options?: ICameraStillOptions & {
+      stream?: boolean;
+      output?: string;
+      format?: string;
+    }
+  ): IOutputException {
+    if (this.reserved) this.unlockReserve();
+    const command = this._serveStill_params(
+      options?.output || "",
+      width,
+      height,
+      options
+    );
+    if (options?.stream) {
+      const proc = spawn(command);
+      return { output: proc, success: true };
+    }
+    try {
+      const execute = execSync(command);
+      return {
+        output: execute,
+        error: undefined,
+        success: true,
+      };
+    } catch (err) {
+      throw err;
+    } finally {
+      if (this.options?.autoReserve) this.reserve();
+    }
+  }
+
+  /**
+   * Same as `serveStill` But everything except some required things must setted manually.
+   * @param {number} width (no description needed)
+   * @param {number} height (no description needed)
+   * @param {string} id of task for managing.
+   * @param { ICameraStillOptions & {stream?: boolean,output?: string,format?: string}} options of serving (full settings and options of camera and rpicam).
+   * @returns { Promise<IOutputException>} capturing status or stream event emitter output (as a `Promise`).
+   */
+
+  async serveStillCustom(
     width: number,
     height: number,
     id: string,
-    options?: ICameraStillOptions & { stream?: boolean }
-  ) {
+    options?: ICameraStillOptions & {
+      stream?: boolean;
+      output?: string;
+      format?: string;
+    }
+  ): Promise<IOutputException> {
     if (this.reserved) this.unlockReserve();
     const command = this._serveStill_params(
-      filename,
-      format,
+      options?.output || "",
       width,
       height,
       options
@@ -364,14 +495,21 @@ export class RPICam {
 
     if (options?.stream) {
       const proc = spawn(command);
-      return { stream: proc, success: true };
+      return { output: proc, success: true };
     }
 
-    return await new Promise((res, rej) => {
+    return await new Promise<IOutputException>((res, rej) => {
       this.tasks.push({
         pid:
           exec(command, (error, output) => {
-            if (error) rej({ error, success: false });
+            if (error)
+              rej({
+                error: {
+                  readable: `An error in capturing still on camera!\nerr: ${error}`,
+                  name: "CAMERA_STILLING_INTERNAL_ERROR",
+                },
+                success: false,
+              });
             else if (output) {
               res({ output, success: true });
               this.tasks = this.tasks.filter((e) => e.id != id);
@@ -382,19 +520,25 @@ export class RPICam {
     }).finally(() => this.options?.autoReserve && this.reserve());
   }
 
-  serveVideoSync(
-    filename: string,
+  /**
+   * Same as `serveVideoCustom` but is sync.
+   * @param {number} timeout of capturing or time argument of streams and other stuff needs time.
+   * @param {number} width (no description needed)
+   * @param {number} height (no description needed)
+   * @param {ICameraVideoOptions & { stream?: boolean, output?: string }} options of serving (full settings and options of camera and rpicam).
+   * @returns {IOutputException} capturing status or stream event emitter output.
+   */
+
+  serveVideoCustomSync(
     timeout: number,
-    format: string | "auto" = "auto",
     width: number,
     height: number,
-    options?: ICameraVideoOptions & { stream?: boolean }
-  ) {
+    options?: ICameraVideoOptions & { stream?: boolean; output?: string }
+  ): IOutputException {
     if (this.reserved) this.unlockReserve();
     const command = this._serveVideo_params(
-      filename,
+      options?.output || "",
       timeout,
-      format,
       width,
       height,
       options
@@ -402,7 +546,7 @@ export class RPICam {
     try {
       if (options?.stream) {
         const proc = spawn(command);
-        return { stream: proc, seccess: true };
+        return { output: proc, success: true };
       }
       const execute = execSync(command);
 
@@ -412,26 +556,34 @@ export class RPICam {
         success: true,
       };
     } catch (err) {
-      return { output: undefined, error: err, success: false };
+      throw err;
     } finally {
       if (this.options?.autoReserve) this.reserve();
     }
   }
-  async serveVideo(
-    filename: string,
+
+  /**
+   * Same as `serveVideo` But everything except some required things must setted manually.
+   * @param {number} timeout of capturing or time argument of streams and other stuff needs time.
+   * @param {number} width (no description needed)
+   * @param {number} height (no description needed)
+   * @param {string} id of task for managing.
+   * @param {ICameraVideoOptions & { stream?: boolean, output?: string }} options of serving (full settings and options of camera and rpicam).
+   * @returns {Promise<IOutputException>} capturing status or stream event emitter output (as a `Promise`).
+   */
+
+  async serveVideoCustom(
     timeout: number,
-    format: string | "auto" = "auto",
     width: number,
     height: number,
     id: string,
-    options?: ICameraVideoOptions & { stream?: boolean }
-  ) {
+    options?: ICameraVideoOptions & { stream?: boolean; output?: string }
+  ): Promise<IOutputException> {
     if (this.reserved) this.unlockReserve();
 
     const command = this._serveVideo_params(
-      filename,
+      options?.output || "",
       timeout,
-      format,
       width,
       height,
       options
@@ -441,10 +593,10 @@ export class RPICam {
 
     if (options?.stream) {
       const proc = spawn(command);
-      return { stream: proc, success: true };
+      return { output: proc, success: true };
     }
 
-    return await new Promise((res, rej) => {
+    return await new Promise<IOutputException>((res, rej) => {
       this.tasks.push({
         pid:
           exec(command, (error, output) => {
@@ -459,17 +611,168 @@ export class RPICam {
     }).finally(() => this.options?.autoReserve && this.reserve());
   }
 
+  /**
+   * Takes a photo and save it into a file (powered by `rpicam-still`).
+   * @param {string} filename is path of saving image, also is okay set it to empty string for streaming options and everything like stream should not be outputed on a file or use `serveStillCutomSync` to set everything manually.
+   * @param {number} width of resolution.
+   * @param {number} height of resolution.
+   * @param {string} id of task for managing.
+   * @param { ICameraStillOptions & { stream?: boolean }} options of serving (full settings and options of camera and rpicam).
+   * @returns {Promise<IOutputException>} capturing status or stream event emitter output (as a `Promise`).
+   */
+
+  async serveStill(
+    filename: string,
+    width: number,
+    height: number,
+    id: string,
+    options?: ICameraStillOptions & { stream?: boolean }
+  ): Promise<IOutputException> {
+    if (this.reserved) this.unlockReserve();
+    const command = this._serveStill_params(filename, width, height, options);
+
+    if (this.tasks.some((e) => e.id == id))
+      throw new Error("'serveStill', id must be unique!");
+
+    if (options?.stream) {
+      const proc = spawn(command);
+      return { output: proc, success: true };
+    }
+
+    return await new Promise<IOutputException>((res, rej) => {
+      this.tasks.push({
+        pid:
+          exec(command, (error, output) => {
+            if (error)
+              rej({
+                error: {
+                  readable: `An error in capturing still on camera!\nerr: ${error}`,
+                  name: "CAMERA_STILLING_INTERNAL_ERROR",
+                },
+                success: false,
+              });
+            else if (output) {
+              res({ output, success: true });
+              this.tasks = this.tasks.filter((e) => e.id != id);
+            }
+          }).pid || -1,
+        id,
+      });
+    }).finally(() => this.options?.autoReserve && this.reserve());
+  }
+
+  /**
+   * Same as `serveVideo` but is sync.
+   * @param {string} filename is path of saving video, also is okay set it to empty string for streaming options and everything like stream should not be outputed on a file or use `serveVideoCutomSync` to set everything manually.
+   * @param {number} width of resolution.
+   * @param {number} height of resolution.
+   * @param { ICameraStillOptions & { stream?: boolean }} options of serving (full settings and options of camera and rpicam).
+   * @returns {Promise<IOutputException>} capturing status or stream event emitter output.
+   */
+
+  serveVideoSync(
+    filename: string,
+    timeout: number,
+    width: number,
+    height: number,
+    options?: ICameraVideoOptions & { stream?: boolean }
+  ): IOutputException {
+    if (this.reserved) this.unlockReserve();
+    const command = this._serveVideo_params(
+      filename,
+      timeout,
+      width,
+      height,
+      options
+    );
+    try {
+      if (options?.stream) {
+        const proc = spawn(command);
+        return { output: proc, success: true };
+      }
+      const execute = execSync(command);
+
+      return {
+        output: execute,
+        error: undefined,
+        success: true,
+      };
+    } catch (err) {
+      throw err;
+    } finally {
+      if (this.options?.autoReserve) this.reserve();
+    }
+  }
+
+  /**
+   * Capture a video and save it into a file (powered by `rpicam-vid`).
+   * @param {string} filename is path of saving video, also is okay set it to empty string for streaming options and everything like stream should not be outputed on a file or use `serveVideoCutomSync` to set everything manually.
+   * @param {number} width of resolution.
+   * @param {number} height of resolution.
+   * @param {string} id of task for managing.
+   * @param { ICameraStillOptions & { stream?: boolean }} options of serving (full settings and options of camera and rpicam).
+   * @returns {Promise<IOutputException>} capturing status or stream event emitter output (as a `Promise`).
+   */
+
+  async serveVideo(
+    filename: string,
+    timeout: number,
+    width: number,
+    height: number,
+    id: string,
+    options?: ICameraVideoOptions & { stream?: boolean }
+  ): Promise<IOutputException> {
+    if (this.reserved) this.unlockReserve();
+
+    const command = this._serveVideo_params(
+      filename,
+      timeout,
+      width,
+      height,
+      options
+    );
+    if (this.tasks.some((e) => e.id == id))
+      throw new Error("'serveVideo' ,id must be unique!");
+
+    if (options?.stream) {
+      const proc = spawn(command);
+      return { output: proc, success: true };
+    }
+
+    return await new Promise<IOutputException>((res, rej) => {
+      this.tasks.push({
+        pid:
+          exec(command, (error, output) => {
+            if (error) rej({ error, success: false });
+            else if (output) {
+              res({ output, success: true });
+              this.tasks = this.tasks.filter((e) => e.id != id);
+            }
+          }).pid || -1,
+        id,
+      });
+    }).finally(() => this.options?.autoReserve && this.reserve());
+  }
+
+  /**
+   * Start a live stream, load stream to `live` property or access it via return value (is similar to event emitter, and powered by `serveVideo`).
+   * @param width (no description needed)
+   * @param height (no description needed)
+   * @param id of task for managing.
+   * @param options of serving (full settings and options of camera and rpicam).
+   * @returns {ChildProcessWithoutNullStreams } spawn stream of node:child_process.
+   */
+
   serveLive(
     width: number,
     height: number,
     id: string,
     options: ICameraVideoOptions
-  ) {
+  ): ChildProcessWithoutNullStreams {
     if (this.reserved) this.unlockReserve();
     const [cmd, ...args] = this._serveVideo_params(
       "-",
       0,
-      "",
       width,
       height,
       options
@@ -485,13 +788,20 @@ export class RPICam {
         this.live.emit("closed");
         if (this.options?.autoReserve) this.reserve();
       });
+      return process;
     } catch (err) {
       this.tasks.filter((e) => e.id != id);
+      throw err;
     }
   }
 
-  getAvailCameras() {
-    const rawData = execSync("rpicam-still --list-cameras").toString();
+  /**
+   * Gets list of avail camera (connected cameras).
+   * @returns {ICameraDescriptor[]} list of cameras, must be empty if nothing connected.
+   */
+
+  static getAvailCameras(): ICameraDescriptor[] {
+    const rawData = execSync("rpicam-hello --list-cameras").toString();
     if (rawData.includes("No cameras available!")) return [];
     const lists = rawData
       .split("-----------------")
@@ -514,7 +824,12 @@ export class RPICam {
 
     return lists;
   }
-  isReadySync() {
+
+  /**
+   * Same as `isReady` but is sync.
+   * @returns {Promise<boolean>} ready status by boolean.
+   */
+  isReadySync(): boolean {
     try {
       execSync("rpicam-still -t 10 -o -");
       return true;
@@ -522,7 +837,11 @@ export class RPICam {
       return false;
     }
   }
-  async isReady() {
+  /**
+   * Checks is Camera ready or not by testing a simple rpicam-still on camera (purpose of testing is to check is connected okay or is free or not).
+   * @returns {Promise<boolean>} ready status by boolean (as a`Promise`).
+   */
+  async isReady(): Promise<boolean> {
     return await new Promise((res) => {
       exec("rpicam-still -t 10 -o -", (err) => (err ? res(false) : res(true)));
     });
