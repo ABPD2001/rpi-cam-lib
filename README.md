@@ -1,6 +1,6 @@
 # Raspberry pi camera library for node.js
 
-**Simple** and **lightweight** library for taking control of _Raspberry Pi Camera_ but dependent to `rpicam-apps-lite` linux package.
+**Simple** and **lightweight** library for taking control of _Raspberry Pi Camera_ for Node (JS/TS).
 
 ## Table of contents
 
@@ -31,7 +31,7 @@ yum list --installed rpicam-apps-lite  # for REHL based distros (not recommended
 
 _Note: if already downloaded, skip downloading, else continue._
 
-then download it by this command:
+then download package by this command:
 
 ```bash
 sudo apt install rpicam-apps-lite  # for Debian based distros.
@@ -39,7 +39,7 @@ sudo apt install rpicam-apps-lite  # for Debian based distros.
 sudo yum install rpicam-apps-lite  # for REHL based distros (not recommended).
 ```
 
-then install in your _node.js_ project with this command:
+at last step, install library on your node.js project:
 
 ```bash
 npm install rpi-cam
@@ -55,6 +55,9 @@ Some advatage of using this library:
 
 - its user-friendly and has advanced tools for professionals.
 - its lightweight.
-- has tiny tiny cache already.
+- has a tiny tiny cache already.
 - all tools in `rpicam-apps-lite` is usable on this library.
 - can wait and reserve camera to avoid **race-condition** bugs.
+- also can do advanced method of capturing videos and photos like _burst shots_, _capturing last 30 minutes_ or _live streaming_ and others...
+
+## APIs
