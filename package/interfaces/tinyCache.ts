@@ -13,8 +13,3 @@ export interface ITinyCacheOptions {
   decompressCommand?: string;
   capicityBytesLimit?: number;
 }
-
-export interface ITinyCacheTask {
-  pid: number;
-  id: string;
-}

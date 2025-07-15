@@ -1,10 +1,3 @@
-import {
-  spawn,
-  exec,
-  execSync,
-  ChildProcessWithoutNullStreams,
-} from "node:child_process";
-import { kill } from "node:process";
 import type {
   ICameraDescriptor,
   ICameraOptions,
@@ -12,14 +5,21 @@ import type {
   ICameraVideoOptions,
   IOutputException,
 } from "./interfaces/index";
+import {
+  spawn,
+  exec,
+  execSync,
+  ChildProcessWithoutNullStreams,
+} from "node:child_process";
 import { EventEmitter } from "node:events";
+import { TASKMAN } from "./common";
 
 class LiveMode extends EventEmitter {
   constructor() {
     super();
   }
 }
-export class RPICam {
+export class RPICam extends TASKMAN {
   private camera: number;
   private options?: ICameraOptions;
   private reserved: boolean = false;
@@ -38,6 +38,7 @@ export class RPICam {
    * @param {ICameraOptions} options is avail options and formatting and setting camera by manual and method of capturing.
    */
   constructor(camera: number, options?: ICameraOptions) {
+    super();
     this.camera = camera;
     this.tasks = [];
     this.options = options;
@@ -343,48 +344,6 @@ export class RPICam {
 
   isReserved(): boolean {
     return this.reserved;
-  }
-
-  /**
-   * Kills a async task opreation of camera.
-   * @param {string} id is a custom id to call it everywhere and should be unique or get a error.
-   * @param {boolean} force to kill a task or not, forcing sends a SIGKILL code to a task but, else sends a SIGTERM code to process.
-   * @returns {IOutputException} status of killing a process, if id not exists, returns a error response, but else, throw a error.
-   */
-
-  killTask(id: string, force: boolean = true): IOutputException {
-    if (this.tasks.some((e) => e.id == id)) {
-      try {
-        kill(this.tasks.find((e) => e.id == id)!.pid, force ? 9 : 15);
-        return { success: true };
-      } catch (err) {
-        throw err;
-      }
-    }
-    return {
-      success: false,
-      error: { readable: "id not exists in tasks!", name: "BAD_ID" },
-    };
-  }
-  /**
-   *
-   * @ * @param {boolean} force to kill a task or not, forcing sends a SIGKILL code to a task but, else sends a SIGTERM code to processes.
-   * @returns {IOutputException} status of killing all process,if error detected, throw a error.
-   */
-
-  killAllTasks(force?: boolean): IOutputException {
-    try {
-      this.tasks.map((e) => kill(e.pid, force ? 9 : 15));
-      return { success: true };
-    } catch (err) {
-      return {
-        success: false,
-        error: {
-          readable: `An error detected while trying to kill all tasks!\nerr: ${err}`,
-          name: "KILLING_ALL_ID_ERROR",
-        },
-      };
-    }
   }
 
   /**

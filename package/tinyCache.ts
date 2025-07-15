@@ -1,19 +1,16 @@
 import { rmSync, readdirSync, statSync, rm } from "node:fs";
 import { exec, execSync } from "node:child_process";
-import type {
-  ITinyCacheOptions,
-  ITinyCacheItem,
-  ITinyCacheTask,
-} from "./interfaces/index";
+import type { ITinyCacheOptions, ITinyCacheItem } from "./interfaces/index";
 import { kill } from "node:process";
+import { TASKMAN } from "./common";
 
-export class TinyCache {
+export class TinyCache extends TASKMAN {
   private root: string;
-  private tasks: ITinyCacheTask[] = [];
   private options: ITinyCacheOptions = {};
   private items: ITinyCacheItem[] = [];
 
   constructor(root: string, options: ITinyCacheOptions) {
+    super();
     this.root = root;
     this.options = options;
   }
@@ -150,24 +147,6 @@ export class TinyCache {
       });
   }
 
-  killTask(id: string, force: boolean = true) {
-    if (this.tasks.some((e) => e.id == id)) {
-      try {
-        kill(this.tasks.find((e) => e.id == id)!.pid, force ? 15 : 9);
-        return true;
-      } catch (err) {
-        return false;
-      }
-    }
-  }
-  killAllTasks(force?: boolean) {
-    try {
-      this.tasks.map((e) => kill(e.pid, force ? 15 : 9));
-      return true;
-    } catch (err) {
-      return false;
-    }
-  }
   clearCacheSync() {
     try {
       rmSync(`${this.root}/*`);
