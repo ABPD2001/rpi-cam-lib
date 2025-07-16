@@ -13,7 +13,7 @@
     "cam"
   ],
   "license": "MIT",
-  "repository": "",
+  "repository": "https://github.com/ABPD2001/rpi-cam",
   "author": "ABPD2001",
   "type": "module",
   "main": "./index.ts",

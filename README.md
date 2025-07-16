@@ -8,6 +8,36 @@
 - [Introduction](#introduction)
 - [Installation](#installation)
 - [Features](#features)
+- [Technicals](#technicals)
+
+  - [Properties](#properties)
+
+    - [`tasks`](#tasks)
+    - [`live`](#live)
+
+  - [Serves](#serves)
+
+    - [`serveStill`](#servestill)
+    - [`serveStillSync`](#servestillsync)
+    - [`serveStillCustom`](#servestillcustom)
+    - [`serveStillCustomSync`](#servestillcustomsync)
+    - [`serveVideo`](#servevideo)
+    - [`serveVideoSync`](#servevideosync)
+    - [`serveVideoCustom`](#servevideocustom)
+    - [`serveVideoCustomSync`](#servevideocustomsync)
+
+  - [Streams](#streams)
+
+    - [`serveLive`](#servelive)
+
+  - [Stats](#stats)
+    - [`isReady`](#isready)
+    - [`isReadySync`](#isreadysync)
+  - [Reservations](#reservations)
+    - [`killTask`](#killtask)
+    - [`killAllTasks`](#killalltasks)
+    - [`reserve`](#reserve)
+    - [`unlockReserve`](#unlockreserve)
 
 ## Introduction
 
@@ -49,15 +79,12 @@ npm install rpi-cam
 
 Is lightweight, user friendly and professionals also can use this as a advanced library access them to every options like **zooming** or adding **effects** and **capturing method** and mores supported in `rpicam-apps-lite`.
 
-Also this library has a _tiny tiny compressing cache_ powered by storage and is user-friendly but also professionals can create their own and use on `rpi-cam` library.
-
 Some advatage of using this library:
 
 - its user-friendly and has advanced tools for professionals.
 - its lightweight.
-- has a tiny tiny cache already.
 - all tools in `rpicam-apps-lite` is usable on this library.
 - can wait and reserve camera to avoid **race-condition** bugs.
 - also can do advanced method of capturing videos and photos like _burst shots_, _capturing last 30 minutes_ or _live streaming_ and others...
 
-## APIs
+## Technicals

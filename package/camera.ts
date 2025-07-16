@@ -313,10 +313,14 @@ export class RPICam extends TASKMAN {
           },
         });
 
-      const resp = await this.serveVideo("-", 0, 50, 50, "Reserve", {
+      const { success } = await this.serveVideoCustom(0, 50, 50, "Reserve", {
         fps: 5,
+        stream: true,
+        output: "-",
       });
-      res({ success: resp.success });
+
+      this.reserved = success;
+      res({ success });
     });
   }
 
@@ -363,11 +367,11 @@ export class RPICam extends TASKMAN {
   ): IOutputException {
     if (this.reserved) this.unlockReserve();
     const command = this._serveStill_params(filename, width, height, options);
-    if (options?.stream) {
-      const proc = spawn(command);
-      return { output: proc, success: true };
-    }
     try {
+      if (options?.stream) {
+        const proc = spawn(command);
+        return { output: proc, success: true };
+      }
       const execute = execSync(command);
       return {
         output: execute,
