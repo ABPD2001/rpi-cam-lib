@@ -1,2 +1,2 @@
-export * from "./camera";
+export { RPICam } from "./camera";
 export type * from "./interfaces/index";
