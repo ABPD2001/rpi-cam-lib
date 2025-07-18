@@ -85,7 +85,7 @@ Some advatage of using this library:
 
 _Technical things documentioned in this section._
 
-The `RPIClass` is the main class for using the Raspberry Pi camera. This class has a constructor that takes two arguments:
+The `RPICam` is the main class for using the Raspberry Pi camera. This class has a constructor that takes two arguments:
 
 1. **Camera Index** [ `number` ]: Selects which camera to use.
 
@@ -141,12 +141,18 @@ _note: options type is `ICameraStillOptions & {stream?: boolean, output?: string
 
 - #### `serveVideo`:
 
-This is an **Asynchronous method** that _Serves_ or, in other words, **saves a video**. This method takes six arguments:
+  This is an **Asynchronous method** that _Serves_ or, in other words, **saves a video**. This method takes six arguments:
 
-- `filename` [ `string` ]: The name of the output file is same to `-o filename` in `rpicam-still` from `rpicam-apps-lite`.
+  - `filename` [ `string` ]: The name of the output file is same to `-o filename` in `rpicam-still` from `rpicam-apps-lite`.
 
-- `timeout` [ `number` ]: The duration of the video recording or any time-related parameter (for specific configurations), also is in _milliseconds_.
-- `width` [ `number` ]: The width of the resolution (in pixels).
-- `height` [ `number` ]: The height of the resolution (in pixels).
-- `id` [ `string` ]: The name of the task saved by this method (for task management).
-- `options` [ `ICameraVideoOptions & { stream?: boolean }` ]: Allows for configuring capabilities such as changing the **recording mode**, **zooming**, **image effects**, and more.
+  - `timeout` [ `number` ]: The duration of the video recording or any time-related parameter (for specific configurations), also is in _milliseconds_.
+  - `width` [ `number` ]: The width of the resolution (in pixels).
+  - `height` [ `number` ]: The height of the resolution (in pixels).
+  - `id` [ `string` ]: The name of the task saved by this method (for task management).
+  - `options` [ `ICameraVideoOptions & { stream?: boolean }` ]: Allows for configuring capabilities such as changing the **recording mode**, **zooming**, **image effects**, and more.
+
+- #### `serveVideoSync`:
+  This method is the **ُynchronous** version of `serveVideo`, with the `id` argument removed. (The arguments include `filename`, `timeout`, `width`, `height` and `options`).
+
+- #### `serveVideoCustom`:
+  
