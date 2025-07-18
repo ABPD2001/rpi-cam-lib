@@ -12,14 +12,15 @@ import {
   ChildProcessWithoutNullStreams,
 } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { TASKMAN } from "./common";
+import { _serveStill_params, _serveVideo_params } from "./utils/serveArgs";
+import { Taskman } from "./common";
 
 class LiveMode extends EventEmitter {
   constructor() {
     super();
   }
 }
-export class RPICam extends TASKMAN {
+export class RPICam extends Taskman {
   private camera: number;
   private options?: ICameraOptions;
   private reserved: boolean = false;
@@ -33,7 +34,7 @@ export class RPICam extends TASKMAN {
   public live: LiveMode = new LiveMode();
 
   /**
-   * @constructor class of `RPICam`, also this constructor can wait until camera get ready.
+   * @constructor constructor of `RPICam`.
    * @param {number} camera is number of camera to get in use.
    * @param {ICameraOptions} options is avail options and formatting and setting camera by manual and method of capturing.
    */
@@ -47,258 +48,8 @@ export class RPICam extends TASKMAN {
     }
   }
 
-  private _serveStill_params(
-    filename: string,
-    width: number,
-    height: number,
-    options?: ICameraStillOptions
-  ) {
-    const {
-      contrast,
-      brightness,
-      quality,
-      exposureCompensation,
-      saturation,
-      sharpness,
-      autoFocusModeRange,
-      effect,
-      autoFocusOnCapture,
-      awb,
-      awbgains,
-      burst,
-      datetime,
-      exposure,
-      flipHorizontal,
-      flipVertical,
-      iso,
-      rotation,
-      zoom,
-      timeout,
-      noPreview,
-      denoise,
-      mode,
-      metadata,
-      finalCommand,
-      initialCommand,
-      timelapse,
-      signal,
-      keypress,
-      format,
-    } = options || {};
-
-    const zoomValues: {
-      name: ICameraStillOptions["zoom"];
-      x: number;
-      y: number;
-      w: number;
-      h: number;
-    }[] = [
-      { name: "1x", x: 0, y: 0, w: 1, h: 1 },
-      { name: "2x", x: 0.25, y: 0.25, w: 0.5, h: 0.5 },
-      { name: "3x", w: 0.33, h: 0.33, x: 0.385, y: 0.385 },
-      { name: "4x", w: 0.25, h: 0.25, x: 0.375, y: 0.375 },
-      { name: "5x", w: 0.2, h: 0.2, x: 0.4, y: 0.4 },
-      { name: "6x", w: 0.16, h: 0.16, x: 0.42, y: 0.42 },
-      { name: "7x", w: 0.14, h: 0.14, x: 0.43, y: 0.43 },
-      { name: "8x", w: 0.125, h: 0.125, x: 0.437, y: 0.437 },
-      { name: "9x", w: 0.11, h: 0.11, x: 0.445, y: 0.445 },
-      { name: "10x", w: 0.1, h: 0.1, x: 0.45, y: 0.45 },
-    ];
-    const zoomValue = zoomValues.find((e) => e.name == (zoom || "1x"));
-
-    const flags = [
-      {
-        key: "--roi",
-        value: `${zoomValue!.x},${zoomValue!.y},${zoomValue!.w},${
-          zoomValue!.h
-        }`,
-        cond: zoom,
-      },
-      { key: "--format", value: format, cond: format },
-      { key: "--iso", value: iso, cond: iso },
-      { key: "--effect", value: effect, cond: effect },
-      { key: "--exposure", value: exposure, cond: exposure },
-      {
-        key: "--ev",
-        value: exposureCompensation,
-        cond: (exposureCompensation || -1) > -1,
-      },
-      { key: "-n", cond: noPreview, value: undefined },
-      { key: "-t", cond: (timeout || -1) > -1, value: timeout },
-      { key: "--quality", cond: (quality || -1) > -1 },
-      { key: "--contrast", cond: (contrast || -1) > -1, value: contrast },
-      { key: "--sharpness", cond: (sharpness || -1) > -1, value: sharpness },
-      { key: "--brightness", cond: (brightness || -1) > -1, value: brightness },
-      { key: "--hflip", cond: flipHorizontal, value: undefined },
-      { key: "--vflip", cond: flipVertical, value: undefined },
-      {
-        key: "--denoise",
-        cond: typeof denoise == "boolean",
-        value: denoise ? "on" : "off",
-      },
-      { key: "--saturation", cond: (saturation || -1) > -1, value: saturation },
-      { key: "--awb", cond: awb, value: awb },
-      {
-        key: "--autofocus-on-capture",
-        cond: autoFocusOnCapture,
-        value: undefined,
-      },
-      { key: "--autofocus-range", cond: autoFocusModeRange, value: undefined },
-      { key: "--mode", cond: mode, value: mode },
-      { key: "--rotation", cond: (rotation || -1) > -1, value: rotation },
-      { key: "--datatime", cond: datetime, value: undefined },
-      { key: "--burst", cond: burst, value: undefined },
-      { key: "--awbgains", cond: awbgains, value: awbgains },
-      { key: "--metadata", cond: metadata, value: metadata ? "on" : "off" },
-      { key: "--final", cond: finalCommand, value: finalCommand },
-      { key: "--initial", cond: initialCommand, value: initialCommand },
-      { key: "--timelapse", cond: (timelapse || -1) > -1, value: timelapse },
-      { key: "--signal", cond: signal, value: signal },
-      { key: "--keypress", cond: keypress, value: keypress },
-    ];
-
-    const command = `rpicam-still --camera ${this.camera} ${flags
-      .filter((e) => e.cond)
-      .map((e) => `${e.key}${e.value ? e.value : ""}`)
-      .join(" ")} -w ${width} -h ${height} ${filename ? `-o ${filename}` : ""}`;
-
-    return command;
-  }
-
-  private _serveVideo_params(
-    filename: string,
-    timeout: number,
-    width: number,
-    height: number,
-    options?: Omit<ICameraVideoOptions, "timeout">
-  ) {
-    const {
-      contrast,
-      brightness,
-      exposureCompensation,
-      saturation,
-      sharpness,
-      autoFocusModeRange,
-      effect,
-      autoFocusOnCapture,
-      awb,
-      awbgains,
-      datetime,
-      exposure,
-      flipHorizontal,
-      flipVertical,
-      iso,
-      rotation,
-      zoom,
-      noPreview,
-      denoise,
-      mode,
-      fps,
-      instra,
-      maxFileSize,
-      segment,
-      codec,
-      codecLevel,
-      codecProfile,
-      bitrate,
-      saveParts,
-      circularMode,
-      finalCommand,
-      initialCommand,
-      metadata,
-      keypress,
-      signal,
-      format,
-    } = options || {};
-
-    const zoomValues: {
-      name: ICameraStillOptions["zoom"];
-      x: number;
-      y: number;
-      w: number;
-      h: number;
-    }[] = [
-      { name: "1x", x: 0, y: 0, w: 1, h: 1 },
-      { name: "2x", x: 0.25, y: 0.25, w: 0.5, h: 0.5 },
-      { name: "3x", w: 0.33, h: 0.33, x: 0.385, y: 0.385 },
-      { name: "4x", w: 0.25, h: 0.25, x: 0.375, y: 0.375 },
-      { name: "5x", w: 0.2, h: 0.2, x: 0.4, y: 0.4 },
-      { name: "6x", w: 0.16, h: 0.16, x: 0.42, y: 0.42 },
-      { name: "7x", w: 0.14, h: 0.14, x: 0.43, y: 0.43 },
-      { name: "8x", w: 0.125, h: 0.125, x: 0.437, y: 0.437 },
-      { name: "9x", w: 0.11, h: 0.11, x: 0.445, y: 0.445 },
-      { name: "10x", w: 0.1, h: 0.1, x: 0.45, y: 0.45 },
-    ];
-    const zoomValue = zoomValues.find((e) => e.name == (zoom || "1x"));
-
-    const flags = [
-      {
-        key: "--roi",
-        value: `${zoomValue!.x},${zoomValue!.y},${zoomValue!.w},${
-          zoomValue!.h
-        }`,
-        cond: zoom,
-      },
-      { key: "--format", value: format, cond: format },
-      { key: "--iso", value: iso, cond: iso },
-      { key: "--effect", value: effect, cond: effect },
-      { key: "--exposure", value: exposure, cond: exposure },
-      {
-        key: "--ev",
-        value: exposureCompensation,
-        cond: (exposureCompensation || -1) > -1,
-      },
-      { key: "-n", cond: noPreview, value: undefined },
-      { key: "-t", cond: (timeout || -1) > -1, value: timeout },
-      { key: "--contrast", cond: (contrast || -1) > -1, value: contrast },
-      { key: "--sharpness", cond: (sharpness || -1) > -1, value: sharpness },
-      { key: "--brightness", cond: (brightness || -1) > -1, value: brightness },
-      { key: "--hflip", cond: flipHorizontal, value: undefined },
-      { key: "--vflip", cond: flipVertical, value: undefined },
-      {
-        key: "--denoise",
-        cond: typeof denoise == "boolean",
-        value: denoise ? "on" : "off",
-      },
-      { key: "--saturation", cond: (saturation || -1) > -1, value: saturation },
-      { key: "--awb", cond: awb, value: awb },
-      {
-        key: "--autofocus-on-capture",
-        cond: autoFocusOnCapture,
-        value: undefined,
-      },
-      { key: "--autofocus-range", cond: autoFocusModeRange, value: undefined },
-      { key: "--mode", cond: mode, value: mode },
-      { key: "--rotation", cond: (rotation || -1) > -1, value: rotation },
-      { key: "--datatime", cond: datetime, value: undefined },
-      { key: "--awbgains", cond: awbgains, value: awbgains },
-      { key: "--fps", cond: (fps || -1) > -1, value: fps },
-      { key: "--instra", cond: (instra || -1) > -1, value: instra },
-      { key: "--metadata", cond: metadata, value: metadata ? "on" : "off" },
-      { key: "--final", cond: finalCommand, value: finalCommand },
-      { key: "--initial", cond: initialCommand, value: initialCommand },
-      { key: "--signal", cond: signal, value: signal },
-      { key: "--keypress", cond: keypress, value: keypress },
-      { key: "--codec", cond: codec, value: codec },
-      { key: "--segment", cond: segment, value: segment },
-      { key: "--level", cond: codecLevel, value: codecLevel },
-      { key: "--profile", cond: codecProfile, value: codecProfile },
-      { key: "--bitrate", cond: bitrate, value: bitrate },
-      { key: "--save-pts", cond: saveParts, value: undefined },
-      { key: "--max-length", cond: maxFileSize, value: maxFileSize },
-      { key: "--circular", cond: circularMode, value: undefined },
-    ];
-
-    const command = `rpicam-still --camera ${this.camera} ${flags
-      .filter((e) => e.cond)
-      .map((e) => `${e.key}${e.value ? e.value : ""}`)
-      .join(" ")} -w ${width} -h ${height} ${filename ? `-o ${filename}` : ""}`;
-
-    return command;
-  }
-
   /**
-   * Reserve camera to not get in use of other process by opening a infinite and cancellable stream of recording.
+   * Reserve the camera to prevent it from being used by other processes by opening an infinite and cancellable recording stream.
    * @returns {Promise<IOutputException>} reservation status.
    */
   async reserve(): Promise<IOutputException> {
@@ -325,7 +76,7 @@ export class RPICam extends TASKMAN {
   }
 
   /**
-   * kills process of reservation of camera and make it free.
+   * Kills process of reservation of camera and make it free.
    * @returns {IOutputException} status of unlocking camera.
    */
 
@@ -366,7 +117,13 @@ export class RPICam extends TASKMAN {
     options?: ICameraStillOptions & { stream?: boolean }
   ): IOutputException {
     if (this.reserved) this.unlockReserve();
-    const command = this._serveStill_params(filename, width, height, options);
+    const command = _serveStill_params(
+      this.camera,
+      filename,
+      width,
+      height,
+      options
+    );
     try {
       if (options?.stream) {
         const proc = spawn(command);
@@ -402,7 +159,8 @@ export class RPICam extends TASKMAN {
     }
   ): IOutputException {
     if (this.reserved) this.unlockReserve();
-    const command = this._serveStill_params(
+    const command = _serveStill_params(
+      this.camera,
       options?.output || "",
       width,
       height,
@@ -431,7 +189,7 @@ export class RPICam extends TASKMAN {
    * @param {number} width (no description needed)
    * @param {number} height (no description needed)
    * @param {string} id of task for managing.
-   * @param { ICameraStillOptions & {stream?: boolean,output?: string,format?: string}} options of serving (full settings and options of camera and rpicam).
+   * @param {ICameraStillOptions & {stream?: boolean,output?: string,format?: string}} options of serving (full settings and options of camera and rpicam).
    * @returns { Promise<IOutputException>} capturing status or stream event emitter output (as a `Promise`).
    */
 
@@ -446,7 +204,8 @@ export class RPICam extends TASKMAN {
     }
   ): Promise<IOutputException> {
     if (this.reserved) this.unlockReserve();
-    const command = this._serveStill_params(
+    const command = _serveStill_params(
+      this.camera,
       options?.output || "",
       width,
       height,
@@ -499,7 +258,8 @@ export class RPICam extends TASKMAN {
     options?: ICameraVideoOptions & { stream?: boolean; output?: string }
   ): IOutputException {
     if (this.reserved) this.unlockReserve();
-    const command = this._serveVideo_params(
+    const command = _serveVideo_params(
+      this.camera,
       options?.output || "",
       timeout,
       width,
@@ -544,7 +304,8 @@ export class RPICam extends TASKMAN {
   ): Promise<IOutputException> {
     if (this.reserved) this.unlockReserve();
 
-    const command = this._serveVideo_params(
+    const command = _serveVideo_params(
+      this.camera,
       options?.output || "",
       timeout,
       width,
@@ -575,7 +336,7 @@ export class RPICam extends TASKMAN {
   }
 
   /**
-   * Takes a photo and save it into a file (powered by `rpicam-still`).
+   * It takes a photo and saves it to a file (powered by rpicam-still).
    * @param {string} filename is path of saving image, also is okay set it to empty string for streaming options and everything like stream should not be outputed on a file or use `serveStillCutomSync` to set everything manually.
    * @param {number} width of resolution.
    * @param {number} height of resolution.
@@ -592,7 +353,13 @@ export class RPICam extends TASKMAN {
     options?: ICameraStillOptions & { stream?: boolean }
   ): Promise<IOutputException> {
     if (this.reserved) this.unlockReserve();
-    const command = this._serveStill_params(filename, width, height, options);
+    const command = _serveStill_params(
+      this.camera,
+      filename,
+      width,
+      height,
+      options
+    );
 
     if (this.tasks.some((e) => e.id == id))
       throw new Error("'serveStill', id must be unique!");
@@ -641,7 +408,8 @@ export class RPICam extends TASKMAN {
     options?: ICameraVideoOptions & { stream?: boolean }
   ): IOutputException {
     if (this.reserved) this.unlockReserve();
-    const command = this._serveVideo_params(
+    const command = _serveVideo_params(
+      this.camera,
       filename,
       timeout,
       width,
@@ -668,7 +436,7 @@ export class RPICam extends TASKMAN {
   }
 
   /**
-   * Capture a video and save it into a file (powered by `rpicam-vid`).
+   * Capture a video and save it to a file (powered by rpicam-vid).
    * @param {string} filename is path of saving video, also is okay set it to empty string for streaming options and everything like stream should not be outputed on a file or use `serveVideoCutomSync` to set everything manually.
    * @param {number} width of resolution.
    * @param {number} height of resolution.
@@ -687,7 +455,8 @@ export class RPICam extends TASKMAN {
   ): Promise<IOutputException> {
     if (this.reserved) this.unlockReserve();
 
-    const command = this._serveVideo_params(
+    const command = _serveVideo_params(
+      this.camera,
       filename,
       timeout,
       width,
@@ -695,7 +464,7 @@ export class RPICam extends TASKMAN {
       options
     );
     if (this.tasks.some((e) => e.id == id))
-      throw new Error("'serveVideo' ,id must be unique!");
+      throw new Error("'serveVideo', id must be unique!");
 
     if (options?.stream) {
       const proc = spawn(command);
@@ -718,7 +487,7 @@ export class RPICam extends TASKMAN {
   }
 
   /**
-   * Start a live stream, load stream to `live` property or access it via return value (is similar to event emitter, and powered by `serveVideo`).
+   * Start a live stream, load the stream to the `live` property or access it via the return value (this is similar to an event emitter and is powered by `serveVideo`).
    * @param width (no description needed)
    * @param height (no description needed)
    * @param id of task for managing.
@@ -733,7 +502,8 @@ export class RPICam extends TASKMAN {
     options: ICameraVideoOptions
   ): ChildProcessWithoutNullStreams {
     if (this.reserved) this.unlockReserve();
-    const [cmd, ...args] = this._serveVideo_params(
+    const [cmd, ...args] = _serveVideo_params(
+      this.camera,
       "-",
       0,
       width,
@@ -759,7 +529,7 @@ export class RPICam extends TASKMAN {
   }
 
   /**
-   * Gets list of avail camera (connected cameras).
+   * Gets list of available camera (connected cameras).
    * @returns {ICameraDescriptor[]} list of cameras, must be empty if nothing connected.
    */
 
@@ -794,7 +564,7 @@ export class RPICam extends TASKMAN {
    */
   isReadySync(): boolean {
     try {
-      execSync("rpicam-still -t 10 -o -");
+      execSync(`rpicam-still --camera ${this.camera} -t 10 -o -`);
       return true;
     } catch (err) {
       return false;
@@ -806,7 +576,9 @@ export class RPICam extends TASKMAN {
    */
   async isReady(): Promise<boolean> {
     return await new Promise((res) => {
-      exec("rpicam-still -t 10 -o -", (err) => (err ? res(false) : res(true)));
+      exec(`rpicam-still --camera ${this.camera} -t 10 -o -`, (err) =>
+        err ? res(false) : res(true)
+      );
     });
   }
 }

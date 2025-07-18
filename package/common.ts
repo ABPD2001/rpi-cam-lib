@@ -6,7 +6,7 @@ interface ITASKMANItem {
   id: string;
 }
 
-export class TASKMAN {
+export class Taskman {
   public tasks: ITASKMANItem[] = [];
 
   /**
