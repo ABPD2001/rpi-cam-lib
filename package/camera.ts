@@ -25,6 +25,12 @@ export class RPICam extends Taskman {
   private options?: ICameraOptions;
   private reserved: boolean = false;
 
+  /**
+   * @type {boolean}
+   * @prop `waiting` has two usage, first is forcing `wait` method to stop, seconds is checking process is waiting or not.
+   */
+  public waiting: boolean = false;
+
   /** @type {{ id: string; pid: number }[]} */
   /**@prop `tasks` is current async opreations running on camera with pid and id.*/
   public tasks: { id: string; pid: number }[];
@@ -580,5 +586,39 @@ export class RPICam extends Taskman {
         err ? res(false) : res(true)
       );
     });
+  }
+
+  /**
+   * Wait Asynchronously until camera being free.
+   * @param {number} timeout is waiting time for releasing camera, is optional and default values is `Infinity`.
+   * @returns {Promise<IOutputException>} when camera is free, always success of return value is `true` but output value means camera is free or not.
+   */
+
+  async wait(timeout: number = Infinity): Promise<IOutputException> {
+    const limit = Date.now() + timeout;
+    return new Promise(async (res) => {
+      while (limit > Date.now() && this.waiting) {
+        if (await this.isReady()) {
+          res({ success: true, output: true });
+        }
+      }
+      res({ success: true, output: false });
+    });
+  }
+
+  /**
+   * is same to wait but is sync.
+   * @param {number} timeout is waiting time for releasing camera, is optional and default values is `Infinity`.
+   * @returns {IOutputException} when camera is free, always success of return value is `true` but output value means camera is free or not.
+   */
+  waitSync(timeout: number = Infinity): IOutputException {
+    const limit = Date.now() + timeout;
+
+    while (limit > Date.now()) {
+      if (this.isReadySync()) {
+        return { success: true, output: true };
+      }
+    }
+    return { success: true, output: false };
   }
 }
