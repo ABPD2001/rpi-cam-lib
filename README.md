@@ -10,6 +10,8 @@ A **simple** and **lightweight** library to control the _Raspberry Pi Camera_ wi
 - [Features](#features)
 - [Technicals](#technicals)
   - [Types](#types)
+    - [Main Type](#main-type)
+    - [Important note](#important)
   - [Properties](#properties)
     - [`tasks`](#tasks)
     - [`live`](#live)
@@ -39,6 +41,8 @@ A **simple** and **lightweight** library to control the _Raspberry Pi Camera_ wi
     - [`wait`](#wait)
     - [`waitSync`](#waitsync)
     - [Examples](#examples-for-reservation)
+  - [License](#license)
+  - [Contact me](#contact-me)
 
 ## Introduction
 
@@ -102,9 +106,9 @@ _note:_ its **important** to know, there is a _static_ method named `getAvailCam
 
 ### Types
 
-In this section, we'll discuss **data types**, such as the types of method outputs and the types of certain method arguments.
+In this section, we'll discuss **data types**, such as the types of **method outputs** and the types of **certain method arguments**.
 
-#### Main types
+#### Main type
 
 - `IOutputException`: common return type of methods except `serveLive`, `getAvailCameras`, `isReady`,`isReadySync` and `isReserved`.
 
@@ -476,3 +480,39 @@ methods includes:
 
   reservation();
   ```
+
+## License
+
+```
+MIT License
+
+Copyright (c) 2025 abpd2001: Abolfazl pouretemadi
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+## Contact Me
+
+You can help us, _report_ bugs and recommend _features_ to us via **email**, `a.p.i.2001.company@gmail.com`.
+
+---
+
+by `@abpd2001`.
+
+thanks `@fmohtadi99` for helps.

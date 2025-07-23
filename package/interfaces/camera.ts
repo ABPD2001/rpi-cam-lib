@@ -50,7 +50,7 @@ interface ICameraCommonOptions {
     | "incandescent"
     | "flash"
     | "incandescent";
-  iso?: 100 | 200 | 400 | 800;
+  iso?: 100 | 200 | 400 | 800 | 1600 | 3200 | 6400 | 12800 | 25600;
   signal?: string;
   keypress?: string;
   exposure?:
