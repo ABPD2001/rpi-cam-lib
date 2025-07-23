@@ -1,10 +1,11 @@
 # Types
 
-All types with all details explained in this page.
+All types with all details, explained in this page.
 
 ### Table of content
 
 - [Table of content](#table-of-content)
+- [Main types](#main-types)
 - [Framing options](#framing-options)
   - [`ICameraStillOptions` (introduction)](#icamerastilloptions-introduction)
   - [`ICameraVideoOptions` (introduction)](#icameravideooptions-introduction)
@@ -26,8 +27,20 @@ All types with all details explained in this page.
   - [`isReady`](#isready)
   - [`isReadySync`](#isreadysync)
   - [`reserve`](#reserve)
-  - [`unlockReserve`]()
-  - [`isReserved`]()
+  - [`unlockReserve`](#unlockreserve)
+  - [`isReserved`](#isreserved)
+
+## Main Types
+
+- `IOutputException`: common return type of methods except `serveLive`, `getAvailCameras`, `isReady`,`isReadySync` and `isReserved`.
+
+  this type has a three properties:
+
+  - `success` [ `boolean` ]: success of doing opreation in methods, not mean as `output`, its only mean is completed or not, _always has a value_.
+
+  - `output` [ `any` ]: output of method, _there isn't always a value_, methods like `serveLive` or any method in [serves](#serves) has `stream: true` in their options, stream methods fills this property with value within type `ChildProcessWithoutNullStreams` (its a child process, somthing like `spawn` from `node:child_process`).
+
+  - `error` [ `{name: string, readable: string}` ]: error of method, _there isn't always a value_,some methods fills this when something mild happens (instead of _throwing_ errors that can make app crash).
 
 ## Framing options
 
