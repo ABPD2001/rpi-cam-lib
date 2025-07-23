@@ -46,7 +46,7 @@ _note:_ its **important** to know, there is a _static_ method named `getAvailCam
 
 ### Types
 
-all _types_ explained in **[docs/types.md](https://github.com/abpd2001/rpi-cam-lib/doc/types.md)** with more details.
+all _types_ explained in **[docs/types.md](https://github.com/ABPD2001/rpi-cam-lib/blob/main/package/docs/types.md)** with more details.
 
 ### Properties
 

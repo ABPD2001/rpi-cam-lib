@@ -62,7 +62,7 @@ Some advatage of using this library:
 
 ## Technicals
 
-_Technical things documentioned in [docs/technichals.md](https://github.com/abpd2001/rpi-cam-lib/docs/technichals.md)._
+_Technical things documentioned in [docs/technichals.md](https://github.com/ABPD2001/rpi-cam-lib/blob/main/package/docs/technicals.md)._
 
 ## License
 
