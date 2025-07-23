@@ -507,7 +507,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Contact Me
+## Contact Us
 
 You can help us, _report_ bugs and recommend _features_ to us via **email**, `a.p.i.2001.company@gmail.com`.
 
