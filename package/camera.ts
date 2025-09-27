@@ -4,7 +4,7 @@ import type {
   ICameraStillOptions,
   ICameraVideoOptions,
   IOutputException,
-} from "./interfaces/index";
+} from "./interfaces/index.js";
 import {
   spawn,
   exec,
@@ -12,8 +12,8 @@ import {
   ChildProcessWithoutNullStreams,
 } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { _serveStill_params, _serveVideo_params } from "./utils/serveArgs";
-import { Taskman } from "./common";
+import { _serveStill_params, _serveVideo_params } from "./utils/serveArgs.js";
+import { Taskman } from "./common.js";
 
 class LiveMode extends EventEmitter {
   constructor() {
@@ -41,16 +41,18 @@ export class RPICam extends Taskman {
 
   /**
    * @constructor constructor of `RPICam`.
-   * @param {number} camera is number of camera to get in use.
+   * @param {number} camera is index of camera to get in use, by default is `0`.
    * @param {ICameraOptions} options is avail options and formatting and setting camera by manual and method of capturing.
    */
-  constructor(camera: number, options?: ICameraOptions) {
+  constructor(camera: number = 0, options?: ICameraOptions) {
     super();
     this.camera = camera;
     this.tasks = [];
     this.options = options;
     if (options?.autoReserve && this.isReadySync()) {
-      this.reserve();
+      this.reserve().catch((e) => {
+        throw new Error(e.error.readable);
+      });
     }
   }
 
@@ -74,6 +76,7 @@ export class RPICam extends Taskman {
         fps: 5,
         stream: true,
         output: "-",
+        timeout: 0,
       });
 
       this.reserved = success;
@@ -123,19 +126,16 @@ export class RPICam extends Taskman {
     options?: ICameraStillOptions & { stream?: boolean }
   ): IOutputException {
     if (this.reserved) this.unlockReserve();
-    const command = _serveStill_params(
-      this.camera,
-      filename,
-      width,
-      height,
-      options
-    );
+    const command = _serveStill_params(this.camera, filename, width, height, {
+      ...options,
+      ...(this.options?.noPreview && { noPreview: true }),
+    });
     try {
       if (options?.stream) {
         const proc = spawn(command);
         return { output: proc, success: true };
       }
-      const execute = execSync(command);
+      const execute = execSync(command, { stdio: "pipe" });
       return {
         output: execute,
         error: undefined,
@@ -167,17 +167,18 @@ export class RPICam extends Taskman {
     if (this.reserved) this.unlockReserve();
     const command = _serveStill_params(
       this.camera,
-      options?.output || "",
+      options?.output || "-",
       width,
       height,
-      options
+      { ...options, ...(this.options?.noPreview && { noPreview: true }) }
     );
     if (options?.stream) {
-      const proc = spawn(command);
+      const commandParts = command.split(" ");
+      const proc = spawn(commandParts[0], commandParts.slice(1));
       return { output: proc, success: true };
     }
     try {
-      const execute = execSync(command);
+      const execute = execSync(command, { stdio: "pipe" });
       return {
         output: execute,
         error: undefined,
@@ -212,17 +213,18 @@ export class RPICam extends Taskman {
     if (this.reserved) this.unlockReserve();
     const command = _serveStill_params(
       this.camera,
-      options?.output || "",
+      options?.output || "-",
       width,
       height,
-      options
+      { ...options, ...(this.options?.noPreview && { noPreview: true }) }
     );
 
     if (this.tasks.some((e) => e.id == id))
-      throw new Error("'serveStill' ,id must be unique!");
+      throw new Error("'serveStill', id must be unique!");
 
     if (options?.stream) {
-      const proc = spawn(command);
+      const commandParts = command.split(" ");
+      const proc = spawn(commandParts[0], commandParts.slice(1));
       return { output: proc, success: true };
     }
 
@@ -266,18 +268,20 @@ export class RPICam extends Taskman {
     if (this.reserved) this.unlockReserve();
     const command = _serveVideo_params(
       this.camera,
-      options?.output || "",
+      options?.output || "-",
       timeout,
       width,
       height,
-      options
+      { ...options, ...(this.options?.noPreview && { noPreview: true }) }
     );
+
     try {
       if (options?.stream) {
-        const proc = spawn(command);
+        const commandParts = command.split(" ");
+        const proc = spawn(commandParts[0], commandParts.slice(1));
         return { output: proc, success: true };
       }
-      const execute = execSync(command);
+      const execute = execSync(command, { stdio: "pipe" });
 
       return {
         output: execute,
@@ -316,13 +320,14 @@ export class RPICam extends Taskman {
       timeout,
       width,
       height,
-      options
+      { ...options, ...(this.options?.noPreview && { noPreview: true }) }
     );
     if (this.tasks.some((e) => e.id == id))
-      throw new Error("'serveVideo' ,id must be unique!");
+      throw new Error("'serveVideo', id must be unique!");
 
     if (options?.stream) {
-      const proc = spawn(command);
+      const commandParts = command.split(" ");
+      const proc = spawn(commandParts[0], commandParts.slice(1));
       return { output: proc, success: true };
     }
 
@@ -359,19 +364,17 @@ export class RPICam extends Taskman {
     options?: ICameraStillOptions & { stream?: boolean }
   ): Promise<IOutputException> {
     if (this.reserved) this.unlockReserve();
-    const command = _serveStill_params(
-      this.camera,
-      filename,
-      width,
-      height,
-      options
-    );
+    const command = _serveStill_params(this.camera, filename, width, height, {
+      ...options,
+      ...(this.options?.noPreview && { noPreview: true }),
+    });
 
     if (this.tasks.some((e) => e.id == id))
       throw new Error("'serveStill', id must be unique!");
 
     if (options?.stream) {
-      const proc = spawn(command);
+      const commandParts = command.split(" ");
+      const proc = spawn(commandParts[0], commandParts.slice(1));
       return { output: proc, success: true };
     }
 
@@ -420,14 +423,15 @@ export class RPICam extends Taskman {
       timeout,
       width,
       height,
-      options
+      { ...options, ...(this.options?.noPreview && { noPreview: true }) }
     );
     try {
       if (options?.stream) {
-        const proc = spawn(command);
+        const commandParts = command.split(" ");
+        const proc = spawn(commandParts[0], commandParts.slice(1));
         return { output: proc, success: true };
       }
-      const execute = execSync(command);
+      const execute = execSync(command, { stdio: "pipe" });
 
       return {
         output: execute,
@@ -467,13 +471,14 @@ export class RPICam extends Taskman {
       timeout,
       width,
       height,
-      options
+      { ...options, ...(this.options?.noPreview && { noPreview: true }) }
     );
     if (this.tasks.some((e) => e.id == id))
       throw new Error("'serveVideo', id must be unique!");
 
     if (options?.stream) {
-      const proc = spawn(command);
+      const commandParts = command.split(" ");
+      const proc = spawn(commandParts[0], commandParts.slice(1));
       return { output: proc, success: true };
     }
 
@@ -514,10 +519,10 @@ export class RPICam extends Taskman {
       0,
       width,
       height,
-      options
+      { ...options, ...(this.options?.noPreview && { noPreview: true }) }
     ).split(" ");
     try {
-      const process = spawn(cmd, args);
+      const process = spawn(cmd, args, { stdio: "pipe" });
       this.tasks.push({ pid: process.pid || -1, id });
       this.live.emit("started");
       process.stdout.on("data", (frame) => {
@@ -540,28 +545,63 @@ export class RPICam extends Taskman {
    */
 
   static getAvailCameras(): ICameraDescriptor[] {
-    const rawData = execSync("rpicam-hello --list-cameras").toString();
-    if (rawData.includes("No cameras available!")) return [];
-    const lists = rawData
-      .split("-----------------")
-      .slice(1)
-      .map((e) => {
-        const [idx, data] = e.split(":").map((a) => a.trim());
-        const [name, resolution, path] = data.split(" ");
-        const [width, height] = resolution
-          .replace("[", "")
-          .replace("]", "")
-          .split("x");
+    try {
+      const rawData = execSync("rpicam-still --list-cameras", {
+        stdio: "pipe",
+      }).toString();
 
-        return {
-          index: Number(idx),
-          name,
-          resolution: { width: Number(width), height: Number(height) },
-          path: path.replace("(", "").replace(")", ""),
-        };
+      if (rawData.includes("No cameras available!")) {
+        return [];
+      }
+
+      const lines = rawData.split("\n").filter((line) => line.trim());
+      const cameras: ICameraDescriptor[] = [];
+      let currentCamera: ICameraDescriptor | null = null;
+
+      lines.forEach((line) => {
+        const cameraMatch = line.match(/Camera\s+(\d+)\s*:\s*(.+)\s+\((.+)\)/);
+        if (cameraMatch) {
+          const [, index, name, driver] = cameraMatch;
+          currentCamera = {
+            index: Number(index),
+            name,
+            driver,
+            format: "",
+            modes: [],
+          };
+          cameras.push(currentCamera);
+          return;
+        }
+
+        const modeMatch = line.match(/Modes:\s*'([^']+)'\s*:/);
+        if (modeMatch && currentCamera) {
+          currentCamera.format = modeMatch[1];
+          const [colorSystem, bitsPart] = modeMatch[1].split("_");
+          currentCamera.colorSystem = colorSystem;
+          currentCamera.bits = bitsPart || colorSystem.match(/\d+/)?.[0];
+          return;
+        }
+
+        const stateMatch = line.match(
+          /(\d+x\d+)\s+\[(\d+\.\d+)\s+fps\s+-\s+\((\d+),\s+(\d+)\)\/(\d+x\d+)\s+crop\]/
+        );
+        if (stateMatch && currentCamera) {
+          const [, resolution, fps, xOffset, yOffset, crop] = stateMatch;
+          const [width, height] = resolution.split("x").map(Number);
+          const [cropWidth, cropHeight] = crop.split("x").map(Number);
+          currentCamera.modes.push({
+            resolution: { width, height },
+            fps: parseFloat(fps),
+            offset: { x: Number(xOffset), y: Number(yOffset) },
+            crop: { width: cropWidth, height: cropHeight },
+          });
+        }
       });
 
-    return lists;
+      return cameras;
+    } catch (error) {
+      throw new Error("Failed at reading camera list!");
+    }
   }
 
   /**
@@ -570,7 +610,9 @@ export class RPICam extends Taskman {
    */
   isReadySync(): boolean {
     try {
-      execSync(`rpicam-still --camera ${this.camera} -t 10 -o -`);
+      execSync(`rpicam-still --camera ${this.camera} -t 10 -o -`, {
+        stdio: "pipe",
+      });
       return true;
     } catch (err) {
       return false;

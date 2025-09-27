@@ -1,4 +1,4 @@
-interface ICameraCommonOptions {
+export interface ICameraCommonOptions {
   timeout?: number;
   noPreview?: boolean;
   contrast?: number;
@@ -96,14 +96,22 @@ export interface ICameraVideoOptions extends ICameraCommonOptions {
 
 export interface ICameraOptions {
   autoReserve?: boolean;
+  noPreview?: boolean;
+}
+
+export interface IMode {
+  resolution: { width: number; height: number };
+  fps: number;
+  offset: { x: number; y: number };
+  crop: { width: number; height: number };
 }
 
 export interface ICameraDescriptor {
-  index: number;
-  name: string;
-  resolution: {
-    width: number;
-    height: number;
-  };
-  path: string;
+  index?: number;
+  format: string;
+  modes: IMode[];
+  name?: string;
+  driver?: string;
+  bits?: string;
+  colorSystem?: string;
 }

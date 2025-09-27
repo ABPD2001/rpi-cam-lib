@@ -75,8 +75,8 @@ export const _serveStill_params = (
       value: exposureCompensation,
       cond: (exposureCompensation || -1) > -1,
     },
-    { key: "-n", cond: noPreview, value: undefined },
-    { key: "-t", cond: (timeout || -1) > -1, value: timeout },
+    { key: "--no-preview", cond: noPreview, value: undefined },
+    { key: "--timeout", cond: (timeout || -1) > -1, value: timeout },
     { key: "--quality", cond: (quality || -1) > -1 },
     { key: "--contrast", cond: (contrast || -1) > -1, value: contrast },
     { key: "--sharpness", cond: (sharpness || -1) > -1, value: sharpness },
@@ -107,12 +107,16 @@ export const _serveStill_params = (
     { key: "--timelapse", cond: (timelapse || -1) > -1, value: timelapse },
     { key: "--signal", cond: signal, value: signal },
     { key: "--keypress", cond: keypress, value: keypress },
+    { key: "--output", cond: filename, value: filename },
+    { key: "--width", cond: width, value: width },
+    { key: "--height", cond: height, value: height },
+    { key: "--camera", cond: index + 1, value: String(index) },
   ];
 
-  const command = `rpicam-still --camera ${index} ${flags
+  const command = `rpicam-still ${flags
     .filter((e) => e.cond)
-    .map((e) => `${e.key}${e.value ? e.value : ""}`)
-    .join(" ")} -w ${width} -h ${height} ${filename ? `-o ${filename}` : ""}`;
+    .map((e) => `${e.key} ${e.value ? e.value : ""}`)
+    .join(" ")}`;
 
   return command;
 };
@@ -199,8 +203,8 @@ export const _serveVideo_params = (
       value: exposureCompensation,
       cond: (exposureCompensation || -1) > -1,
     },
-    { key: "-n", cond: noPreview, value: undefined },
-    { key: "-t", cond: (timeout || -1) > -1, value: timeout },
+    { key: "--no-preview", cond: noPreview, value: undefined },
+    { key: "--timeout", cond: (timeout || -1) > -1, value: timeout },
     { key: "--contrast", cond: (contrast || -1) > -1, value: contrast },
     { key: "--sharpness", cond: (sharpness || -1) > -1, value: sharpness },
     { key: "--brightness", cond: (brightness || -1) > -1, value: brightness },
@@ -238,12 +242,16 @@ export const _serveVideo_params = (
     { key: "--save-pts", cond: saveParts, value: undefined },
     { key: "--max-length", cond: maxFileSize, value: maxFileSize },
     { key: "--circular", cond: circularMode, value: undefined },
+    { key: "--output", cond: filename, value: filename },
+    { key: "--width", cond: width, value: width },
+    { key: "--height", cond: height, value: height },
+    { key: "--camera", cond: index + 1, value: String(index) },
   ];
 
-  const command = `rpicam-still --camera ${index} ${flags
+  const command = `rpicam-vid ${flags
     .filter((e) => e.cond)
-    .map((e) => `${e.key}${e.value ? e.value : ""}`)
-    .join(" ")} -w ${width} -h ${height} ${filename ? `-o ${filename}` : ""}`;
+    .map((e) => `${e.key} ${e.value ? e.value : ""}`)
+    .join(" ")}`;
 
   return command;
 };

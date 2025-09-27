@@ -1,2 +1,2 @@
-export { RPICam } from "./camera";
-export type * from "./interfaces/index";
+export { RPICam } from "./camera.js";
+export type * from "./interfaces/index.js";
