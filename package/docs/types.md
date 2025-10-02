@@ -42,6 +42,26 @@ All types with all details, explained in this page.
 
   - `error` [ `{name: string, readable: string}` ]: error of method, _there isn't always a value_,some methods fills this when something mild happens (instead of _throwing_ errors that can make app crash).
 
+- `ICameraDescriptor`: Bunch of details of camera like _coloring system_, _bitrate_, _driver_ and more...
+
+  this type includes these:
+
+  - index [`number`]: index of camera.
+  - format [`number`]: format of camera.
+  - modes [`IMode[]`]: operational functions of camera.
+  - name [`string`]: name of camera.
+  - driver [`string`]: path of camera driver.
+  - bits [`number`]: processing bits for capturing.
+  - colorSystem [`string`]: color system of camera coloring.
+
+  _note:_ `IMode` is a type and includes these:
+
+  - resoulation [`{ width:number, height:number }`]: resoulation of camera by pixels.
+
+  - fps [`number`]: frame per seconds of camera (_fps_).
+  - offset [`{x: number, y:number}`]: offset of camera to processing like _digital zoom_ or more functions that needs to cut part of image.
+  - crop [`{ width:number, height:number }`]: crop of camera image.
+
 ## Framing options
 
 Serving **video**, **still** and **live** somtimes must use advanced options like **adding effects**, activating **denoiser**, setting **iso**, **rotation** and more, these options are possible with `options` arguemnt in _serve_ methods.
