@@ -1,6 +1,6 @@
 {
   "name": "rpi-cam-lib",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A lightweight library to control CSI-2 camera modules via any raspberry pi can read camera module but is dependent to shell.",
   "scripts": {
     "compile": "tsc"

@@ -102,12 +102,35 @@ export class RPICam extends Taskman {
   }
 
   /**
-   * Check reservation of camera by this process.
+   * Checks reservation of camera by this process.
    * @returns {boolean} is reserved or not.
    */
 
   isReserved(): boolean {
     return this.reserved;
+  }
+
+  /**
+   * Checks if camera is able to responde or not (independent to reservation).
+   * @returns {boolean | { readable: string; name: string }}
+   */
+
+  async test(): Promise<boolean | { readable: string; name: string }> {
+    const { error } = await this.serveStillCustom(1, 1, "test-operation", {
+      output: "-",
+      timeout: 1,
+    });
+    return error || true;
+  }
+
+  /**
+   * Checks synchronously if camera is able to responde or not (independent to reservation).
+   * @returns {boolean | { readable: string; name: string }}
+   */
+
+  testSync(): boolean | { readable: string; name: string } {
+    const { error } = this.serveStillCustomSync(1, 1, { output: "-" });
+    return error || true;
   }
 
   /**
@@ -123,7 +146,7 @@ export class RPICam extends Taskman {
     filename: string,
     width: number,
     height: number,
-    options?: ICameraStillOptions & { stream?: boolean }
+    options?: ICameraStillOptions & { stream?: boolean },
   ): IOutputException {
     if (this.reserved) this.unlockReserve();
     const command = _serveStill_params(this.camera, filename, width, height, {
@@ -162,7 +185,7 @@ export class RPICam extends Taskman {
       stream?: boolean;
       output?: string;
       format?: string;
-    }
+    },
   ): IOutputException {
     if (this.reserved) this.unlockReserve();
     const command = _serveStill_params(
@@ -170,7 +193,7 @@ export class RPICam extends Taskman {
       options?.output || "-",
       width,
       height,
-      { ...options, ...(this.options?.noPreview && { noPreview: true }) }
+      { ...options, ...(this.options?.noPreview && { noPreview: true }) },
     );
     if (options?.stream) {
       const commandParts = command.split(" ");
@@ -208,7 +231,7 @@ export class RPICam extends Taskman {
       stream?: boolean;
       output?: string;
       format?: string;
-    }
+    },
   ): Promise<IOutputException> {
     if (this.reserved) this.unlockReserve();
     const command = _serveStill_params(
@@ -216,7 +239,7 @@ export class RPICam extends Taskman {
       options?.output || "-",
       width,
       height,
-      { ...options, ...(this.options?.noPreview && { noPreview: true }) }
+      { ...options, ...(this.options?.noPreview && { noPreview: true }) },
     );
 
     if (this.tasks.some((e) => e.id == id))
@@ -263,7 +286,7 @@ export class RPICam extends Taskman {
     timeout: number,
     width: number,
     height: number,
-    options?: ICameraVideoOptions & { stream?: boolean; output?: string }
+    options?: ICameraVideoOptions & { stream?: boolean; output?: string },
   ): IOutputException {
     if (this.reserved) this.unlockReserve();
     const command = _serveVideo_params(
@@ -272,7 +295,7 @@ export class RPICam extends Taskman {
       timeout,
       width,
       height,
-      { ...options, ...(this.options?.noPreview && { noPreview: true }) }
+      { ...options, ...(this.options?.noPreview && { noPreview: true }) },
     );
 
     try {
@@ -310,7 +333,7 @@ export class RPICam extends Taskman {
     width: number,
     height: number,
     id: string,
-    options?: ICameraVideoOptions & { stream?: boolean; output?: string }
+    options?: ICameraVideoOptions & { stream?: boolean; output?: string },
   ): Promise<IOutputException> {
     if (this.reserved) this.unlockReserve();
 
@@ -320,7 +343,7 @@ export class RPICam extends Taskman {
       timeout,
       width,
       height,
-      { ...options, ...(this.options?.noPreview && { noPreview: true }) }
+      { ...options, ...(this.options?.noPreview && { noPreview: true }) },
     );
     if (this.tasks.some((e) => e.id == id))
       throw new Error("'serveVideo', id must be unique!");
@@ -361,7 +384,7 @@ export class RPICam extends Taskman {
     width: number,
     height: number,
     id: string,
-    options?: ICameraStillOptions & { stream?: boolean }
+    options?: ICameraStillOptions & { stream?: boolean },
   ): Promise<IOutputException> {
     if (this.reserved) this.unlockReserve();
     const command = _serveStill_params(this.camera, filename, width, height, {
@@ -414,7 +437,7 @@ export class RPICam extends Taskman {
     timeout: number,
     width: number,
     height: number,
-    options?: ICameraVideoOptions & { stream?: boolean }
+    options?: ICameraVideoOptions & { stream?: boolean },
   ): IOutputException {
     if (this.reserved) this.unlockReserve();
     const command = _serveVideo_params(
@@ -423,7 +446,7 @@ export class RPICam extends Taskman {
       timeout,
       width,
       height,
-      { ...options, ...(this.options?.noPreview && { noPreview: true }) }
+      { ...options, ...(this.options?.noPreview && { noPreview: true }) },
     );
     try {
       if (options?.stream) {
@@ -461,7 +484,7 @@ export class RPICam extends Taskman {
     width: number,
     height: number,
     id: string,
-    options?: ICameraVideoOptions & { stream?: boolean }
+    options?: ICameraVideoOptions & { stream?: boolean },
   ): Promise<IOutputException> {
     if (this.reserved) this.unlockReserve();
 
@@ -471,7 +494,7 @@ export class RPICam extends Taskman {
       timeout,
       width,
       height,
-      { ...options, ...(this.options?.noPreview && { noPreview: true }) }
+      { ...options, ...(this.options?.noPreview && { noPreview: true }) },
     );
     if (this.tasks.some((e) => e.id == id))
       throw new Error("'serveVideo', id must be unique!");
@@ -510,7 +533,7 @@ export class RPICam extends Taskman {
     width: number,
     height: number,
     id: string,
-    options: ICameraVideoOptions
+    options: ICameraVideoOptions,
   ): ChildProcessWithoutNullStreams {
     if (this.reserved) this.unlockReserve();
     const [cmd, ...args] = _serveVideo_params(
@@ -519,7 +542,7 @@ export class RPICam extends Taskman {
       0,
       width,
       height,
-      { ...options, ...(this.options?.noPreview && { noPreview: true }) }
+      { ...options, ...(this.options?.noPreview && { noPreview: true }) },
     ).split(" ");
     try {
       const process = spawn(cmd, args, { stdio: "pipe" });
@@ -583,7 +606,7 @@ export class RPICam extends Taskman {
         }
 
         const stateMatch = line.match(
-          /(\d+x\d+)\s+\[(\d+\.\d+)\s+fps\s+-\s+\((\d+),\s+(\d+)\)\/(\d+x\d+)\s+crop\]/
+          /(\d+x\d+)\s+\[(\d+\.\d+)\s+fps\s+-\s+\((\d+),\s+(\d+)\)\/(\d+x\d+)\s+crop\]/,
         );
         if (stateMatch && currentCamera) {
           const [, resolution, fps, xOffset, yOffset, crop] = stateMatch;
@@ -625,7 +648,7 @@ export class RPICam extends Taskman {
   async isReady(): Promise<boolean> {
     return await new Promise((res) => {
       exec(`rpicam-still --camera ${this.camera} -t 10 -o -`, (err) =>
-        err ? res(false) : res(true)
+        err ? res(false) : res(true),
       );
     });
   }

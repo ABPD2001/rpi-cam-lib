@@ -26,6 +26,8 @@ _Technical things documentioned here._
 - [Stats](#stats)
   - [`isReady`](#isready)
   - [`isReadySync`](#isreadysync)
+  - [`test`](#test)
+  - [`testSync`](#testsync)
   - [Examples](#examples-for-stats)
 - [Reservations](#reservations)
   - [`killTask`](#killtask)
@@ -55,7 +57,6 @@ all _types_ explained in **[docs/types.md](https://github.com/ABPD2001/rpi-cam-l
 - `tasks` [ `{pid: number, id: string} []` ]: current running _async_ tasks for managing them with `killTask` or `killAllTasks` or manage it directly by _process id_.
 
 - `live` [ extends `EventEmitter` ]: When you start a live stream with the `serveLive` method, it provides output in two ways:
-
   - The **first output** is in the return value, which is a process type, or more specifically, a `ChildProcessWithoutNullStreams`.
 
   - The **second output** is available in a property called `live`. This property, via an `EventEmitter`, provides each live frame as a buffer using events.
@@ -75,7 +76,6 @@ Some methods are responsible for **Serving** content through the camera, like se
 - #### `serveStill`:
 
   This is an **Asynchronous Method** responsible for _serving_ or, in other words, saving a photo. This method takes five arguments:
-
   - `filename` [ `string` ]: The name of the output file is same to `-o filename` in `rpicam-still` from `rpicam-apps-lite`.
 
   - `width`: [ `number` ]: The width of the capture (in pixels) resolution.
@@ -99,7 +99,6 @@ _note:_ `options` type is `ICameraStillOptions & {stream?: boolean, output?: str
 - #### `serveVideo`:
 
   This is an **Asynchronous method** that _Serves_ or, in other words, **saves a video**. This method takes six arguments:
-
   - `filename` [ `string` ]: The name of the output file is same to `-o filename` in `rpicam-still` from `rpicam-apps-lite`.
 
   - `timeout` [ `number` ]: The duration of the video recording or any time-related parameter (for specific configurations), also is in _milliseconds_.
@@ -226,7 +225,6 @@ Some methods (for now is only one), are responsible for streaming frames, they i
 - #### `serveLive`:
 
   This is an **Asynchronous method** that starts a live stream whenever it's called. (To access the live stream, you should use the `live` property in the `RPICam` class or the function's return value, as explained previously.) It takes the following arguments:
-
   - `width` [ `number` ]: The width of the stream resolution (by pixels).
   - `height` [ `number` ]: The height of the stream resolution (by pixels).
   - `id` [ `string` ]: The name of the task that will be created by this method, used for task management.
@@ -276,6 +274,18 @@ methods includes:
 
   _note:_ no arguments should passed to this method.
 
+- ### `test`:
+
+  Its a **Asynchronous method** to test camera independently from anything _(like reservation)_, return **true** as success, else returns a `{ readable: string, name: string }` object as failure.
+
+  _note:_ no arguments should passed to this method.
+
+- ### `testSync`:
+
+  Its a **Synchronous method** of `test`.
+
+  _note:_ no arguments should passed to this method.
+
 - #### Examples for stats:
 
 _note:_ You should evaluate `RPICam` constructor before use this examples, also we imagine `camera` variable is `RPICam` class with evaluated constructor.
@@ -303,6 +313,21 @@ console.log(camera.isReadySync() ? "its Ready" : "its not Ready");
 // output type is boolean.
 ```
 
+Example for `test`:
+
+```ts
+const test = async () => {
+  const result = await camera.test();
+  console.log(result);
+};
+```
+
+Example for `testSync`:
+
+```ts
+console.log(camera.testSync());
+```
+
 ### Reservation
 
 Some methods are responsible for reserving and releasing camera or just waiting for camera to release, all this actions happens just for avoiding **Race-condition** bug.
@@ -316,7 +341,6 @@ methods includes:
   This is a **synchronous method** that terminates asynchronous video recording tasks belonging to its main process, based on their task ID. (It works based on Node.js's `process.kill`).
 
   This method takes these arguments:
-
   - `id` [ `string` ]: Id of asynchronous task created by asynchronous methods.
   - `force` [ `boolean` ]: force kill, fore means to send **SIGKILL** code but else sends **SIGINT** code, (difference betwen code 15 and 9).
 
@@ -355,7 +379,6 @@ methods includes:
 - #### `wait`:
 
   This **Asynchronous method** waits in a _loop_ for the camera to become available (_asynchronously_). It returns a result once the camera responds, if timeout reachs end, responds with `output: false` but `success` of output is always `true` (_return type_ of this method backs to [Types](#types) in [Return types](#return-types)) ,This method takes two arguments:
-
   - `timeout` [ `number` ]: The duration to wait (in _milliseconds_ ans its _optional_). If this time elapses, the waiting loop terminates. Its default value is `Infinity`.
 
   _note:_ You can also **force the wait to end** by setting the `waiting` property to `false`.
